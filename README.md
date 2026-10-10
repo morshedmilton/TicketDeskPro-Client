@@ -57,34 +57,46 @@ TicketDesk Pro is an **affordable, self-hostable** alternative: run it on your o
 ## Use Cases at a Glance
 
 ```mermaid
-useCaseDiagram
-    actor Customer
-    actor Agent
-    actor Admin
-    actor "SLA Engine (automatic)" as SLA
+flowchart LR
+    CUSTOMER("👤 Customer")
+    AGENT("🧑‍💼 Agent")
+    ADMIN("🛠️ Admin")
+    SLA("⚙️ SLA Engine")
 
-    Customer --> (Submit a ticket)
-    Customer --> (Track own tickets)
-    Customer --> (Reply in ticket thread)
-    Customer --> (Receive email updates)
+    CUSTOMER --- T1[/"Submit a ticket"/]
+    CUSTOMER --- T2[/"Track own tickets"/]
+    CUSTOMER --- T3[/"Reply in ticket thread"/]
+    CUSTOMER --- T4[/"Receive email updates"/]
 
-    Agent --> (Triage ticket queue)
-    Agent --> (Claim / receive assignment)
-    Agent --> (Reply & add internal notes)
-    Agent --> (Change ticket status)
-    Agent --> (Upload attachments)
+    AGENT --- A1[/"Triage ticket queue"/]
+    AGENT --- A2[/"Claim / receive assignment"/]
+    AGENT --- A3[/"Reply & add internal notes"/]
+    AGENT --- A4[/"Change ticket status"/]
+    AGENT --- A5[/"Upload attachments"/]
 
-    Admin --> (Configure SLA policies)
-    Admin --> (Manage users & roles)
-    Admin --> (View dashboards & KPIs)
-    Admin --> (Search audit logs)
+    ADMIN --- D1[/"Configure SLA policies"/]
+    ADMIN --- D2[/"Manage users & roles"/]
+    ADMIN --- D3[/"View dashboards & KPIs"/]
+    ADMIN --- D4[/"Search audit logs"/]
 
-    SLA --> (Start timer on ticket creation)
-    SLA --> (Warn before breach)
-    SLA --> (Flag SLA breaches)
+    SLA --- S1[/"Start timer on creation"/]
+    SLA --- S2[/"Warn 1h before breach"/]
+    SLA --- S3[/"Flag SLA breaches"/]
 
-    (Configure SLA policies) .> (Start timer on ticket creation) : defines targets
-    (Submit a ticket) .> (Start timer on ticket creation) : triggers
+    D1 -. defines targets .-> S1
+    T1 -. triggers .-> S1
+
+    classDef actor fill:#1E293B,stroke:#0F172A,color:#FFFFFF,stroke-width:2px
+    classDef cust fill:#DBEAFE,stroke:#3B82F6,color:#1E3A8A
+    classDef agt fill:#EDE9FE,stroke:#8B5CF6,color:#5B21B6
+    classDef adm fill:#FEF3C7,stroke:#F59E0B,color:#92400E
+    classDef sys fill:#D1FAE5,stroke:#10B981,color:#065F46
+
+    class CUSTOMER,AGENT,ADMIN,SLA actor
+    class T1,T2,T3,T4 cust
+    class A1,A2,A3,A4,A5 agt
+    class D1,D2,D3,D4 adm
+    class S1,S2,S3 sys
 ```
 
 ---
