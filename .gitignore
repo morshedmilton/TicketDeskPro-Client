@@ -24,3 +24,4 @@ out/
 build/
 next-env.d.ts
 .vercel
+node_modules.broken/
