@@ -111,14 +111,50 @@ flowchart LR
 | HTTP | Axios with auto token-refresh interceptors |
 | Hosting | Vercel |
 
+## Phase 6 — Auth & Core Layout (shipped)
+
+The full authentication loop: login/register/forgot-password pages with per-role demo buttons, an Axios client that attaches the JWT and **silently refreshes expired tokens** (single-flight — ten parallel 401s trigger exactly one refresh), a Next.js proxy guarding routes by role claims, a role-based sidebar, a live SignalR notification bell, and the app shell.
+
+```mermaid
+sequenceDiagram
+    actor U as User
+    participant MW as Next.js proxy
+    participant APP as AuthContext
+    participant API as Axios client
+    participant BE as Backend API
+
+    U->>APP: submit login form
+    APP->>BE: POST /auth/login
+    BE-->>APP: accessToken + refreshToken + user
+    APP->>APP: store tokens + mirror cookie + start SignalR
+    APP->>MW: redirect to /dashboard
+    MW->>MW: cookie has token? role allowed? proceed
+
+    Note over API,BE: Later call hits an expired access token
+    API->>BE: GET /auth/me (expired JWT)
+    BE-->>API: 401
+    API->>BE: POST /auth/refresh (single-flight: one call for all parallel 401s)
+    BE-->>API: new token pair
+    API->>API: store new tokens, mirror cookie
+    API->>BE: retry GET /auth/me with fresh token
+    BE-->>API: 200 profile
+
+    Note over APP,BE: Refresh fails -> session ends
+    API->>APP: clear tokens + redirect /login?next=…
+```
+
+**Local dev:** start the API (`dotnet run`, enables CORS for `http://localhost:3000`), then `npm run dev` and open http://localhost:3000 — sign in with any seeded demo button.
+
+**Design system:** `design-system/ticketdesk-pro/MASTER.md` (trust-blue primary, orange CTA, Plus Jakarta Sans) — generated from the project's UI/UX ruleset; every phase's UI must follow it.
+
 ## Building in Public — Roadmap
 
 - [x] Phase 1 — Database design & EF Core migrations *(API repo)*
 - [x] Phase 2 — JWT auth, refresh-token rotation, RBAC *(API repo)*
-- [ ] Phase 3 — Ticket management & state machine
-- [ ] Phase 4 — SLA engine + real-time notifications
-- [ ] Phase 5 — Dashboards & analytics
-- [ ] **Phase 6 — This repo: frontend auth & layout**
+- [x] Phase 3 — Ticket management & state machine *(API repo)*
+- [x] Phase 4 — SLA engine + real-time notifications *(API repo)*
+- [x] Phase 5 — Dashboards & analytics *(API repo — backend complete)*
+- [x] **Phase 6 — This repo: frontend auth & layout**
 - [ ] Phase 7 — Frontend tickets & dashboard UI
 - [ ] Phase 8 — Production deployment (Render + Vercel)
 
