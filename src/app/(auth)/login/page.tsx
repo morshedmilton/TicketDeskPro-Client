@@ -10,9 +10,10 @@ import { Button, Card, CardDescription, CardTitle, Input, Label } from "@/lib/ui
 
 /** PRD wireframe: centered card, logo handled by the auth layout,
  *  email + password, forgot-password link, primary "Sign In", register link.
- *  Demo buttons per role — the seeded local accounts (dev only). */
+ *  Demo buttons per role — always in dev, and in prod only when the host opts in
+ *  with NEXT_PUBLIC_SHOW_DEMO_LOGIN=true (mirrors the API's SeedDemoUsers flag). */
 const DEMO_ACCOUNTS =
-  process.env.NODE_ENV === "development"
+  process.env.NODE_ENV === "development" || process.env.NEXT_PUBLIC_SHOW_DEMO_LOGIN === "true"
     ? ([
         { role: "Customer", email: "customer@ticketdesk.dev" },
         { role: "Agent", email: "agent@ticketdesk.dev" },
@@ -108,23 +109,25 @@ function LoginPage() {
         </Button>
       </form>
 
-      <div className="mt-6 border-t border-border pt-4">
-        <p className="mb-3 text-center text-xs text-muted-foreground">Demo login (seeded accounts)</p>
-        <div className="grid grid-cols-2 gap-2">
-          {DEMO_ACCOUNTS.map((account) => (
-            <Button
-              key={account.role}
-              type="button"
-              variant="outline"
-              size="sm"
-              disabled={isSubmitting}
-              onClick={() => onDemoLogin(account.email)}
-            >
-              {account.role}
-            </Button>
-          ))}
+      {DEMO_ACCOUNTS.length > 0 && (
+        <div className="mt-6 border-t border-border pt-4">
+          <p className="mb-3 text-center text-xs text-muted-foreground">Demo login (seeded accounts)</p>
+          <div className="grid grid-cols-2 gap-2">
+            {DEMO_ACCOUNTS.map((account) => (
+              <Button
+                key={account.role}
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={isSubmitting}
+                onClick={() => onDemoLogin(account.email)}
+              >
+                {account.role}
+              </Button>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       <p className="mt-6 text-center text-sm text-muted-foreground">
         Don&apos;t have an account?{" "}
