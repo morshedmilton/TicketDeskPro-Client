@@ -202,6 +202,8 @@ Deployed on **Vercel** (frontend) + **Render** (API) with **Neon** Postgres and 
 
 Password for all: `Admin123!`
 
+Demo buttons show automatically in local dev; in production they appear only when the host opts in with `NEXT_PUBLIC_SHOW_DEMO_LOGIN=true` on Vercel (mirrors the API's `SeedDemoUsers` flag — demo logins are never implicit in prod).
+
 ## Building in Public — Roadmap
 
 - [x] Phase 1 — Database design & EF Core migrations *(API repo)*
