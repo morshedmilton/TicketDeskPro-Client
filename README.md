@@ -147,6 +147,41 @@ sequenceDiagram
 
 **Design system:** `design-system/ticketdesk-pro/MASTER.md` (trust-blue primary, orange CTA, Plus Jakarta Sans) — generated from the project's UI/UX ruleset; every phase's UI must follow it.
 
+## Phase 7 — Tickets & Dashboard UI (shipped)
+
+The whole product surface, on top of the Phase 6 shell:
+
+- **Ticket list** — server-driven filters (status, priority, category, assignment), cursor pagination, debounced search, auto-refresh on real-time events.
+- **Ticket detail** — conversation thread with internal notes, SLA countdown bar, state-machine transition buttons (customers only get the BR-016 *Customer Replied* move), assignment, metadata editing (Open/In Progress only), attachments with drag-drop upload (BR-009/010) and download.
+- **Create ticket** — validated form + dropzone; upload failures never block ticket creation (M9).
+- **Queue** — unassigned open tickets with one-click **Claim** (assign self → In Progress), guarded by the ETag row version.
+- **Dashboard** — role-aware: customers see personal counts; agents/admins get KPI cards, priority/trend/category charts (Recharts) and the 30-day agent leaderboard.
+- **Admin pages** — users (invite/edit/deactivate/restore), SLA policies, categories & tags; plus the audit-log viewer with before/after snapshots.
+- **Real-time** — SignalR events raise toasts and bump a version counter that refetches every query on the page.
+
+```mermaid
+flowchart TD
+    S["SignalR event (TicketAssigned, NewMessage, SlaBreached…)"] --> T["Toaster (toast + link)"]
+    S --> V["version++ on the open page"]
+    V --> Q["useQuery refetches list / detail / messages"]
+    Q --> U["UI updates without a manual refresh"]
+
+    subgraph Pages
+        L["/tickets list<br/>filters + cursor pages"] --> D["/tickets/[id]<br/>thread + SLA sidebar"]
+        D --> ST["Transition buttons<br/>(server state machine + ETag)"]
+        D --> MSG["Reply / internal note"]
+        L --> N["/tickets/new<br/>form + drag-drop files"]
+        L --> QP["/queue<br/>Claim unassigned"]
+        DB["/dashboard<br/>KPIs + Recharts"] --> LB["Agent leaderboard"]
+    end
+
+    ST --> API["ASP.NET Core API"]
+    MSG --> API
+    N --> API
+    QP --> API
+    DB --> API
+```
+
 ## Building in Public — Roadmap
 
 - [x] Phase 1 — Database design & EF Core migrations *(API repo)*
@@ -155,7 +190,7 @@ sequenceDiagram
 - [x] Phase 4 — SLA engine + real-time notifications *(API repo)*
 - [x] Phase 5 — Dashboards & analytics *(API repo — backend complete)*
 - [x] **Phase 6 — This repo: frontend auth & layout**
-- [ ] Phase 7 — Frontend tickets & dashboard UI
+- [x] **Phase 7 — This repo: frontend tickets & dashboard UI**
 - [ ] Phase 8 — Production deployment (Render + Vercel)
 
 ## License
