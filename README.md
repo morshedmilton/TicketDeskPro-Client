@@ -1,5 +1,12 @@
 # TicketDesk Pro — Client
 
+[![Vercel](https://img.shields.io/badge/deployed-Vercel-000000?logo=vercel&logoColor=white)](https://ticketdeskpro-client.vercel.app)
+![Next.js](https://img.shields.io/badge/Next.js-16-000000?logo=next.js&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)
+![Tailwind](https://img.shields.io/badge/Tailwind-4-06B6D4?logo=tailwindcss&logoColor=white)
+
+🚀 **Live:** https://ticketdeskpro-client.vercel.app · API: https://ticketdeskpro-api.onrender.com/swagger
+
 The **Next.js 16** frontend of TicketDesk Pro: a centralized support ticketing & SLA platform that turns a chaotic shared inbox into a disciplined customer-service workflow.
 
 > Backend API: [`TicketDeskPro-API`](https://github.com/morshedmilton/TicketDeskPro-API) · ASP.NET Core 10 · PostgreSQL · Redis · SignalR
@@ -182,6 +189,19 @@ flowchart TD
     DB --> API
 ```
 
+## Live & Demo Logins
+
+Deployed on **Vercel** (frontend) + **Render** (API) with **Neon** Postgres and **Upstash** Redis — all free tier. Open the app, click a demo button, password is pre-filled:
+
+| Role | Email |
+|---|---|
+| SuperAdmin | superadmin@ticketdesk.dev |
+| Admin | admin@ticketdesk.dev |
+| Agent | agent@ticketdesk.dev |
+| Customer | customer@ticketdesk.dev |
+
+Password for all: `Admin123!`
+
 ## Building in Public — Roadmap
 
 - [x] Phase 1 — Database design & EF Core migrations *(API repo)*
@@ -191,7 +211,7 @@ flowchart TD
 - [x] Phase 5 — Dashboards & analytics *(API repo — backend complete)*
 - [x] **Phase 6 — This repo: frontend auth & layout**
 - [x] **Phase 7 — This repo: frontend tickets & dashboard UI**
-- [ ] Phase 8 — Production deployment (Render + Vercel)
+- [x] **Phase 8 — Production deployment (Render + Vercel)**
 
 ## License
 
