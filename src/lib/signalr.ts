@@ -30,15 +30,18 @@ export function startSignalR(onNotification: NotificationHandler): () => void {
 
   const forward = (name: string) =>
     connection!.on(name, (payload: Record<string, unknown>) => {
-      onNotification({
+      const notification = {
         id: crypto.randomUUID(),
         type: mapEventType(name),
         title: titleFor(name, payload),
         message: describe(name, payload),
-        link: payload.ticketNumber ? `/tickets/${payload.ticketNumber}` : null,
+        link: payload.ticketId ? `/tickets/${payload.ticketId}` : null,
         isRead: false,
         createdAt: new Date().toISOString(),
-      });
+      };
+      onNotification(notification);
+      // Also fire the toast bus so the Toaster reacts without prop drilling.
+      window.dispatchEvent(new CustomEvent("tdp-toast", { detail: notification }));
     });
 
   // Events emitted by SignalRRealtimeNotifier (Phase 4).
