@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Navbar } from "@/components/layout/Navbar";
 import { Sidebar } from "@/components/layout/Sidebar";
+import { Toaster } from "@/components/layout/Toaster";
 import { useAuth } from "@/contexts/AuthContext";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
@@ -29,6 +30,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <Sidebar />
         <main className="flex-1 p-4 md:p-6">{children}</main>
       </div>
+      <Toaster />
     </div>
   );
 }
