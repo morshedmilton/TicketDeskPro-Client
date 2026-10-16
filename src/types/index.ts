@@ -24,8 +24,8 @@ export interface AuthUser {
 }
 
 export interface AuthResponse {
+  // No refreshToken: it travels only as an HttpOnly Set-Cookie (XSS hardening).
   accessToken: string;
-  refreshToken: string;
   user: AuthUser;
 }
 
