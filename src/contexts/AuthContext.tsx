@@ -10,7 +10,7 @@ import {
   type ReactNode,
 } from "react";
 import { API_BASE_URL, request } from "@/lib/api";
-import { clearTokens, getRefreshToken, getStoredUser, storeTokens } from "@/lib/auth-storage";
+import { clearTokens, getStoredUser, markLoggedOut, storeTokens } from "@/lib/auth-storage";
 import { startSignalR, stopSignalR } from "@/lib/signalr";
 import type { AuthUser, NotificationItem, RegisterRequest } from "@/types";
 
@@ -60,12 +60,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [user?.id]);
 
   const login = useCallback(async (email: string, password: string) => {
-    const data = await request<{ accessToken: string; refreshToken: string; user: AuthUser }>({
+    // Refresh token arrives as an HttpOnly Set-Cookie — never in this payload.
+    const data = await request<{ accessToken: string; user: AuthUser }>({
       method: "POST",
       url: "/auth/login",
       data: { email, password },
     });
-    storeTokens(data.accessToken, data.refreshToken, data.user);
+    storeTokens(data.accessToken, data.user);
     setUser(data.user);
     return data.user;
   }, []);
@@ -75,16 +76,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const logout = useCallback(() => {
-    // Best-effort server-side revoke — keepalive survives the navigation that follows.
-    const refreshToken = getRefreshToken();
-    if (refreshToken) {
-      void fetch(`${API_BASE_URL}/auth/revoke`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ refreshToken }),
-        keepalive: true,
-      }).catch(() => {});
-    }
+    // Latch first: if the revoke POST is lost, the stale cookie can no longer
+    // resurrect the session via a background 401→refresh.
+    markLoggedOut();
+    // Best-effort server-side revoke — the HttpOnly cookie rides along
+    // (credentials: include) and the API clears it; keepalive survives the
+    // navigation that follows. No body: revoke reads the cookie.
+    void fetch(`${API_BASE_URL}/auth/revoke`, {
+      method: "POST",
+      credentials: "include",
+      keepalive: true,
+    }).catch(() => {});
     stopSignalR();
     clearTokens();
     setUser(null);
