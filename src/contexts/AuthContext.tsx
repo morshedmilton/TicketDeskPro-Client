@@ -9,7 +9,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { API_BASE_URL, request } from "@/lib/api";
+import { authRequest, request } from "@/lib/api";
 import { clearTokens, getStoredUser, markLoggedOut, storeTokens } from "@/lib/auth-storage";
 import { startSignalR, stopSignalR } from "@/lib/signalr";
 import type { AuthUser, NotificationItem, RegisterRequest } from "@/types";
@@ -60,8 +60,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [user?.id]);
 
   const login = useCallback(async (email: string, password: string) => {
-    // Refresh token arrives as an HttpOnly Set-Cookie — never in this payload.
-    const data = await request<{ accessToken: string; user: AuthUser }>({
+    // Through the Next proxy (first-party cookie) — refresh token arrives as an
+    // HttpOnly Set-Cookie, never in this payload.
+    const data = await authRequest<{ accessToken: string; user: AuthUser }>({
       method: "POST",
       url: "/auth/login",
       data: { email, password },
@@ -82,7 +83,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Best-effort server-side revoke — the HttpOnly cookie rides along
     // (credentials: include) and the API clears it; keepalive survives the
     // navigation that follows. No body: revoke reads the cookie.
-    void fetch(`${API_BASE_URL}/auth/revoke`, {
+    void fetch("/api/v1/auth/revoke", {
       method: "POST",
       credentials: "include",
       keepalive: true,
