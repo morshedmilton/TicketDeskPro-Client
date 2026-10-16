@@ -4,7 +4,7 @@ import axios, {
   type InternalAxiosRequestConfig,
 } from "axios";
 import type { ApiResponse, AuthResponse } from "@/types";
-import { clearTokens, getAccessToken, getRefreshToken, storeTokens } from "@/lib/auth-storage";
+import { clearTokens, getAccessToken, isLoggedOut, storeTokens } from "@/lib/auth-storage";
 
 export const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5000/api/v1";
@@ -12,6 +12,8 @@ export const API_BASE_URL =
 export const api: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
   timeout: 15_000,
+  // Send/accept the HttpOnly refresh cookie (cross-site: Vercel → Render).
+  withCredentials: true,
 });
 
 // ---------- envelope helpers ----------
@@ -54,19 +56,20 @@ let refreshPromise: Promise<string | null> | null = null;
 
 /** Single-flight: ten parallel 401s must trigger exactly ONE /auth/refresh call. */
 async function refreshAccessToken(): Promise<string | null> {
+  // Logout latch: never resurrect a session the user just ended.
+  if (isLoggedOut()) return null;
   try {
-    const refreshToken = getRefreshToken();
-    if (!refreshToken) return null;
+    // No body — the refresh token rides in the HttpOnly cookie automatically.
     // Raw axios on purpose — the authenticated instance would recurse here.
     const response = await axios.post<ApiResponse<AuthResponse>>(
       `${API_BASE_URL}/auth/refresh`,
-      { refreshToken },
-      { timeout: 15_000 },
+      undefined,
+      { timeout: 15_000, withCredentials: true },
     );
     const body = response.data;
     if (!body.success) return null;
 
-    storeTokens(body.data.accessToken, body.data.refreshToken, body.data.user);
+    storeTokens(body.data.accessToken, body.data.user);
     return body.data.accessToken;
   } catch {
     return null;
