@@ -132,17 +132,17 @@ sequenceDiagram
 
     U->>APP: submit login form
     APP->>BE: POST /auth/login
-    BE-->>APP: accessToken + refreshToken + user
-    APP->>APP: store tokens + mirror cookie + start SignalR
+    BE-->>APP: accessToken + user (refresh token set as HttpOnly cookie)
+    APP->>APP: store access token + user, mirror cookie, start SignalR
     APP->>MW: redirect to /dashboard
     MW->>MW: cookie has token? role allowed? proceed
 
     Note over API,BE: Later call hits an expired access token
     API->>BE: GET /auth/me (expired JWT)
     BE-->>API: 401
-    API->>BE: POST /auth/refresh (single-flight: one call for all parallel 401s)
-    BE-->>API: new token pair
-    API->>API: store new tokens, mirror cookie
+    API->>BE: POST /auth/refresh (single-flight, HttpOnly cookie, no body)
+    BE-->>API: new accessToken (cookie rotated)
+    API->>API: store new access token, mirror cookie
     API->>BE: retry GET /auth/me with fresh token
     BE-->>API: 200 profile
 
