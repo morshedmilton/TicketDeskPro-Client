@@ -16,6 +16,26 @@ export const api: AxiosInstance = axios.create({
   withCredentials: true,
 });
 
+// Auth endpoints go through the Next.js rewrite proxy (/api/v1/auth/* → API
+// origin) so the refresh cookie is FIRST-party — Safari drops third-party
+// cookies entirely. Relative base = same origin = the proxy.
+const authApi: AxiosInstance = axios.create({
+  baseURL: "/api/v1",
+  timeout: 15_000,
+  withCredentials: true,
+});
+
+/** Same envelope unwrap as request(), but via the same-origin auth proxy. */
+export async function authRequest<T>(config: Parameters<typeof authApi.request>[0]): Promise<T> {
+  const response = await authApi.request<ApiResponse<T>>(config);
+  const body = response.data;
+  if (!body.success) {
+    const first = body.errors?.[0];
+    throw new ApiRequestError(first?.message ?? "Request failed", first?.code ?? "UNKNOWN", first?.field);
+  }
+  return body.data;
+}
+
 // ---------- envelope helpers ----------
 
 /** Unwraps { success, data } or throws the first API error with its code. */
@@ -60,9 +80,10 @@ async function refreshAccessToken(): Promise<string | null> {
   if (isLoggedOut()) return null;
   try {
     // No body — the refresh token rides in the HttpOnly cookie automatically.
+    // Relative URL = Next proxy = first-party cookie (Safari-safe).
     // Raw axios on purpose — the authenticated instance would recurse here.
     const response = await axios.post<ApiResponse<AuthResponse>>(
-      `${API_BASE_URL}/auth/refresh`,
+      "/api/v1/auth/refresh",
       undefined,
       { timeout: 15_000, withCredentials: true },
     );
