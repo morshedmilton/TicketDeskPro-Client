@@ -10,7 +10,6 @@ import {
   Settings,
   Tags,
   Users,
-  UserRoundCog,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
@@ -38,8 +37,7 @@ const NAV_SECTIONS: { title: string; items: NavItem[] }[] = [
   {
     title: "Administration",
     items: [
-      { href: "/users", label: "Users", icon: Users, roles: ADMIN_ROLES },
-      { href: "/admin/roles", label: "Roles", icon: UserRoundCog, roles: ["SuperAdmin"] },
+      { href: "/admin/users", label: "Users", icon: Users, roles: ADMIN_ROLES },
       { href: "/admin/sla-policies", label: "SLA Policies", icon: Settings, roles: ADMIN_ROLES },
       { href: "/admin/categories", label: "Categories & Tags", icon: Tags, roles: ADMIN_ROLES },
       { href: "/audit-logs", label: "Audit Logs", icon: ScrollText, roles: ADMIN_ROLES },
