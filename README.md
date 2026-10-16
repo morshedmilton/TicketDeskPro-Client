@@ -115,44 +115,58 @@ flowchart LR
 | Framework | Next.js 16 (App Router) + TypeScript |
 | Styling | Tailwind CSS + shadcn/ui |
 | Real-time | SignalR WebSocket client |
-| HTTP | Axios with auto token-refresh interceptors |
+| HTTP | Axios + withCredentials; JWT auto-refresh (single-flight); auth endpoints via same-origin Next rewrite proxy; refresh token in HttpOnly cookie |
 | Hosting | Vercel |
 
 ## Phase 6 — Auth & Core Layout (shipped)
 
-The full authentication loop: login/register/forgot-password pages with per-role demo buttons, an Axios client that attaches the JWT and **silently refreshes expired tokens** (single-flight — ten parallel 401s trigger exactly one refresh), a Next.js proxy guarding routes by role claims, a role-based sidebar, a live SignalR notification bell, and the app shell.
+The full authentication loop: login / register / forgot-password / reset-password pages with per-role demo buttons, an Axios client that attaches the JWT and **silently refreshes expired tokens** (single-flight — ten parallel 401s trigger exactly one refresh), a role-based sidebar, a live SignalR notification bell, and the app shell.
+
+There is no Next.js middleware. Route protection is the **`(app)` layout** — a client-side auth check that redirects anonymous visitors to `/login` — and **role-based UI gating** (which nav links appear for which role) lives in the **Sidebar**.
+
+**Security:** the refresh token never touches JavaScript (HttpOnly cookie set by the API), the cookie stays first-party because auth calls run through the Next rewrite proxy (Safari drops third-party cookies), the logged-out latch stops a background 401 → refresh from silently resurrecting a session after logout, and the legacy `tdp_refresh` localStorage key is purged on every clear.
 
 ```mermaid
 sequenceDiagram
     actor U as User
-    participant MW as Next.js proxy
     participant APP as AuthContext
+    participant NX as Next rewrite proxy
     participant API as Axios client
     participant BE as Backend API
 
-    U->>APP: submit login form
-    APP->>BE: POST /auth/login
-    BE-->>APP: accessToken + user (refresh token set as HttpOnly cookie)
-    APP->>APP: store access token + user, mirror cookie, start SignalR
-    APP->>MW: redirect to /dashboard
-    MW->>MW: cookie has token? role allowed? proceed
+    Note over APP,NX: login + refresh + revoke go through the same-origin Next rewrite proxy (/api/v1/auth/* to API origin) — the reason: Safari drops third-party cookies, so the HttpOnly refresh cookie must be first-party
+    Note over APP,BE: register, forgot-password, reset-password and all data calls go direct to the API origin with a Bearer token
 
-    Note over API,BE: Later call hits an expired access token
+    U->>APP: submit login form
+    APP->>NX: POST /api/v1/auth/login
+    NX->>BE: POST /auth/login
+    BE-->>NX: accessToken + user (refresh token set as HttpOnly cookie)
+    NX-->>APP: 200 (refresh cookie is first-party)
+    APP->>APP: store access token + user, start SignalR
+    APP->>U: redirect to /dashboard
+
+    Note over API,BE: Later data call hits an expired access token
     API->>BE: GET /auth/me (expired JWT)
     BE-->>API: 401
-    API->>BE: POST /auth/refresh (single-flight, HttpOnly cookie, no body)
-    BE-->>API: new accessToken (cookie rotated)
+    Note over API,BE: Auto-refresh is single-flight — ten parallel 401s trigger exactly one refresh
+    API->>NX: POST /api/v1/auth/refresh (HttpOnly cookie, no body)
+    NX->>BE: POST /auth/refresh (cookie attached)
+    BE-->>NX: new accessToken (cookie rotated)
+    NX-->>API: 200
     API->>API: store new access token, mirror cookie
     API->>BE: retry GET /auth/me with fresh token
     BE-->>API: 200 profile
 
-    Note over APP,BE: Refresh fails -> session ends
+    Note over APP,BE: Refresh fails — session ends
     API->>APP: clear tokens + redirect /login?next=…
+
+    U->>APP: click sign out
+    APP->>APP: markLoggedOut (latch blocks future refreshes)
+    APP->>NX: POST /api/v1/auth/revoke (credentials + keepalive)
+    NX->>BE: POST /auth/revoke (refresh cookie attached + cleared)
+    APP->>APP: stop SignalR + clearTokens
+    APP->>U: redirect to /login
 ```
-
-**Local dev:** start the API (`dotnet run`, enables CORS for `http://localhost:3000`), then `npm run dev` and open http://localhost:3000 — sign in with any seeded demo button.
-
-**Design system:** `design-system/ticketdesk-pro/MASTER.md` (trust-blue primary, orange CTA, Plus Jakarta Sans) — generated from the project's UI/UX ruleset; every phase's UI must follow it.
 
 ## Phase 7 — Tickets & Dashboard UI (shipped)
 
@@ -178,7 +192,7 @@ flowchart TD
         D --> ST["Transition buttons<br/>(server state machine + ETag)"]
         D --> MSG["Reply / internal note"]
         L --> N["/tickets/new<br/>form + drag-drop files"]
-        L --> QP["/queue<br/>Claim unassigned"]
+        L --> QP["/tickets/queue<br/>Claim unassigned"]
         DB["/dashboard<br/>KPIs + Recharts"] --> LB["Agent leaderboard"]
     end
 
@@ -188,6 +202,83 @@ flowchart TD
     QP --> API
     DB --> API
 ```
+
+## Getting Started
+
+1. Clone and install dependencies:
+
+   ```bash
+   git clone https://github.com/morshedmilton/TicketDeskPro-Client.git
+   cd TicketDeskPro-Client
+   npm install
+   ```
+
+2. Copy `.env.example` to `.env.local` and adjust the values (see [Environment Variables](#environment-variables)).
+3. Start the backend API — follow the [API repo README](https://github.com/morshedmilton/TicketDeskPro-API#readme) (`dotnet run`; it must enable CORS for `http://localhost:3000`).
+4. Run the client:
+
+   ```bash
+   npm run dev
+   ```
+
+Open http://localhost:3000 and sign in with any seeded demo button.
+
+## Environment Variables
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `NEXT_PUBLIC_API_URL` | `http://localhost:5000/api/v1` | Backend API base URL |
+| `NEXT_PUBLIC_SIGNALR_URL` | `http://localhost:5000/hubs/notifications` | SignalR notifications hub |
+| `NEXT_PUBLIC_SHOW_DEMO_LOGIN` | off | Shows the demo login buttons (always on in `npm run dev`; production requires `=true`) — mirrors the API's `SeedDemoUsers` flag |
+
+## Routes
+
+| Route | Page |
+|---|---|
+| `/` | Landing page |
+| `/login` | Sign in (demo buttons) |
+| `/register` | Create account |
+| `/forgot-password` | Request a password reset email |
+| `/reset-password` | Set a new password |
+| `/dashboard` | KPIs, charts, agent leaderboard |
+| `/tickets` | Ticket list (filters, search, cursor pages) |
+| `/tickets/new` | Create ticket |
+| `/tickets/[id]` | Ticket detail (thread, SLA, transitions) |
+| `/tickets/queue` | Unassigned tickets — one-click claim |
+| `/admin/users` | Invite / edit / deactivate users |
+| `/admin/sla-policies` | SLA policy editor |
+| `/admin/categories` | Categories & tags |
+| `/audit-logs` | Audit log viewer |
+
+## Project Structure
+
+```text
+src/
+├── app/
+│   ├── (auth)/          # login, register, forgot-password, reset-password — public
+│   ├── (app)/           # dashboard, tickets/*, admin/*, audit-logs — protected by the (app) layout
+│   └── page.tsx         # landing page
+├── lib/
+│   ├── api.ts           # dual Axios instances (API origin + same-origin auth proxy) + single-flight refresh
+│   ├── auth-storage.ts  # access token + user storage, logout latch, legacy-key purge
+│   ├── signalr.ts       # SignalR connection
+│   ├── tickets.ts, admin.ts, toasts.ts  # feature clients
+│   └── utils.ts, ui-helpers.tsx         # cn() helper + Card/Button/Input shorthands
+├── hooks/
+│   └── useQuery.ts      # tiny data-fetching hook with the version-bump refetch
+├── contexts/
+│   └── AuthContext.tsx  # session, login / register / logout, notifications
+├── components/
+│   ├── layout/          # Sidebar (role gating), Navbar, NotificationBell, Toaster
+│   ├── tickets/         # Badges, FileDropzone
+│   └── charts/          # DashboardCharts
+└── types/
+    └── index.ts
+
+next.config.ts           # rewrite /api/v1/auth/* → API origin (keeps the refresh cookie first-party)
+```
+
+**Design system:** `design-system/ticketdesk-pro/MASTER.md` (trust-blue primary, orange CTA, Plus Jakarta Sans) — generated from the project's UI/UX ruleset; every phase's UI must follow it.
 
 ## Live & Demo Logins
 
