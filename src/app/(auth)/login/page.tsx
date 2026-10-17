@@ -34,7 +34,9 @@ function LoginPage() {
 
   const rawNext = searchParams.get("next") ?? "/dashboard";
   // Only same-origin paths — never //evil.com or absolute URLs.
-  const nextPath = rawNext.startsWith("/") && !rawNext.startsWith("//") ? rawNext : "/dashboard";
+  // Same-origin relative paths only: reject //host, /\host and absolute URLs (FE-N1).
+  const nextPath =
+    rawNext.startsWith("/") && !rawNext.startsWith("//") && !rawNext.startsWith("/\\") ? rawNext : "/dashboard";
 
   async function submit(targetEmail = email, targetPassword = password) {
     setIsSubmitting(true);
