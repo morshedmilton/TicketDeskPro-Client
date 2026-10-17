@@ -1,6 +1,22 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  async headers() {
+    // Baseline security headers on every page (FE-H1). No CSP yet — Next.js
+    // inline bootstrap scripts make a strict CSP a separate project.
+    return [
+      {
+        source: "/:path*",
+        headers: [
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          { key: "X-Frame-Options", value: "DENY" },
+          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+          { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
+          { key: "X-Permitted-Cross-Domain-Policies", value: "none" },
+        ],
+      },
+    ];
+  },
   async rewrites() {
     // Auth endpoints proxy through the Next server so the HttpOnly refresh
     // cookie is FIRST-party — Safari drops third-party cookies entirely, and
